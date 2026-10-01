@@ -1,0 +1,1377 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="10/3 1号機くじ">
+<link rel="manifest" href="manifest-1003-1.webmanifest">
+<link rel="apple-touch-icon" href="icon-1003-1-180.png">
+<link rel="icon" href="icon-1003-1-180.png">
+<meta name="theme-color" content="#E23B3B">
+<title>10/3 1号機 ガラガラくじ</title>
+<style>
+:root{
+  --bg1:#FFF7E8; --bg2:#FFE3B8; --bg3:#FFCE84;
+  --red:#E23B3B; --red-d:#A82525;
+  --gold:#FFC93C; --gold-d:#D99400;
+  --blue:#2D8CF0; --ink:#4A3521; --ink-l:#8A7156;
+  --card:#FFFFFF;
+  --shadow:0 .8vmin 0 rgba(0,0,0,.15), 0 2vmin 4vmin rgba(120,70,20,.22);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;width:100%;overflow:hidden;overscroll-behavior:none;position:fixed;top:0;left:0}
+body{
+  font-family:'Hiragino Maru Gothic ProN','ヒラギノ丸ゴ ProN W4','Yu Gothic UI','Meiryo',system-ui,sans-serif;
+  color:var(--ink);
+  background:radial-gradient(125% 95% at 50% 0%, var(--bg1) 0%, var(--bg2) 55%, var(--bg3) 100%);
+  user-select:none;-webkit-user-select:none;
+  touch-action:manipulation;
+  -webkit-text-size-adjust:100%;
+}
+
+/* ===== 背景のふわふわ装飾 ===== */
+.deco{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0}
+.deco i{position:absolute;bottom:-15vmin;display:block;border-radius:50%;opacity:.3;
+  background:radial-gradient(circle at 34% 28%, #fff 0%, currentColor 72%);
+  animation:floaty linear infinite}
+@keyframes floaty{
+  0%{transform:translateY(0) rotate(0deg)}
+  100%{transform:translateY(-125vh) rotate(360deg)}
+}
+
+/* ===== 画面共通 ===== */
+.screen{position:fixed;inset:0;z-index:10;
+  display:flex;flex-direction:column;align-items:center;justify-content:space-between;
+  padding:calc(1.5vmin + env(safe-area-inset-top)) 3vmin calc(2.5vmin + env(safe-area-inset-bottom))}
+.screen[hidden]{display:none}
+
+/* ===== タイトル ===== */
+.title{text-align:center;line-height:1.15;flex:0 0 auto;z-index:2}
+.title .sub{
+  display:inline-block;font-size:clamp(12px,2.4vmin,25px);font-weight:700;color:#fff;
+  background:var(--red);border-radius:999px;padding:.5em 1.5em;letter-spacing:.1em;
+  box-shadow:0 .5vmin 0 var(--red-d)}
+.title .main{
+  margin-top:1.3vmin;font-size:clamp(25px,6.2vmin,62px);font-weight:900;letter-spacing:.04em;color:var(--red-d);
+  text-shadow:.35vmin .35vmin 0 #fff,-.35vmin .35vmin 0 #fff,.35vmin -.35vmin 0 #fff,-.35vmin -.35vmin 0 #fff,0 .9vmin 0 rgba(168,37,37,.2)}
+
+/* ===== ガラガラ抽選器 ===== */
+.machine-wrap{flex:1 1 auto;display:grid;place-items:center;width:100%;min-height:0;z-index:1}
+.machine{width:min(92vw,66vh);max-width:700px;height:auto;overflow:visible;
+  filter:drop-shadow(0 2vmin 3vmin rgba(120,60,10,.26))}
+#drum,#handle{transform-origin:0px 0px}
+#handle{filter:drop-shadow(0 3px 3px rgba(90,40,0,.45))}   /* ドラムの手前にあることを分かりやすく */
+.spinning #drum,.spinning #handle{animation:spin var(--spin) cubic-bezier(.26,.04,.18,1) forwards}
+.shaking .machine{animation:shake .11s ease-in-out infinite}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(1170deg)}}
+@keyframes shake{
+  0%,100%{transform:translate(0,0)}
+  25%{transform:translate(-.4%,.3%)}
+  75%{transform:translate(.4%,-.3%)}
+}
+/* 出てくる玉（SVG内） */
+#ballG{opacity:0}
+#ballG.show{opacity:1;animation:ballOut 1s cubic-bezier(.3,.9,.4,1) forwards}
+@keyframes ballOut{
+  0%{transform:translate(6px,-14px) scale(.35);opacity:0}
+  14%{opacity:1}
+  38%{transform:translate(-14px,28px) scale(1)}
+  52%{transform:translate(-28px,60px) scale(1)}
+  64%{transform:translate(-36px,38px) scale(1)}
+  78%{transform:translate(-44px,62px) scale(1)}
+  88%{transform:translate(-48px,52px) scale(1)}
+  100%{transform:translate(-52px,62px) scale(1)}
+}
+
+/* ===== 下部ボタン ===== */
+.foot{flex:0 0 auto;width:100%;display:grid;place-items:center;gap:1.4vmin;z-index:2}
+.big-btn{
+  -webkit-appearance:none;appearance:none;border:none;cursor:pointer;font-family:inherit;
+  font-weight:900;color:#fff;font-size:clamp(23px,5.4vmin,54px);letter-spacing:.06em;
+  padding:.6em 1.4em;border-radius:999px;min-width:min(78vw,520px);
+  background:linear-gradient(180deg,#FF6E5E 0%,var(--red) 55%,#C62828 100%);
+  box-shadow:0 1.1vmin 0 var(--red-d),0 2vmin 3.5vmin rgba(180,40,40,.38);
+  transition:transform .08s ease,box-shadow .08s ease;
+  animation:pulse 1.7s ease-in-out infinite}
+.big-btn:active{transform:translateY(.9vmin);box-shadow:0 .2vmin 0 var(--red-d);animation:none}
+.big-btn:disabled{opacity:.4;animation:none}
+.big-btn.blue{background:linear-gradient(180deg,#5FB0FF 0%,var(--blue) 55%,#1565C0 100%);box-shadow:0 1.1vmin 0 #14539A,0 2vmin 3.5vmin rgba(40,110,200,.35)}
+.big-btn.blue:active{box-shadow:0 .2vmin 0 #14539A}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
+.hint{font-size:clamp(12px,2.5vmin,23px);font-weight:700;color:var(--ink-l);text-align:center;line-height:1.5}
+
+/* ===== スタッフ用パネル（右上を軽くタップしたときだけ出る） ===== */
+#staffPanel{position:fixed;right:calc(1.5vmin + env(safe-area-inset-right));top:calc(1.5vmin + env(safe-area-inset-top));
+  z-index:72;max-width:min(72vw,440px);
+  background:rgba(38,48,58,.94);color:#fff;border-radius:14px;padding:12px 16px;
+  font-family:'Yu Gothic UI','Hiragino Sans','Meiryo',sans-serif;
+  font-size:clamp(12px,2vmin,17px);line-height:1.65;text-align:left;
+  box-shadow:0 6px 24px rgba(0,0,0,.32);
+  opacity:0;transform:translateY(-10px);pointer-events:none;transition:opacity .18s ease,transform .18s ease}
+#staffPanel.show{opacity:1;transform:none}
+#staffPanel b{font-size:1.1em}
+#staffPanel .sep{height:1px;background:rgba(255,255,255,.25);margin:7px 0}
+#staffPanel .small{opacity:.78;font-size:.9em}
+#adminHot{position:fixed;right:0;top:0;width:16vmin;height:16vmin;min-width:88px;min-height:88px;
+  z-index:70;background:transparent}
+/* 2台で使うときの端末名（スタッフが取り違えないための控えめな表示） */
+#machineTag{position:fixed;right:calc(2vmin + env(safe-area-inset-right));bottom:calc(1.6vmin + env(safe-area-inset-bottom));
+  z-index:20;font-size:clamp(9px,1.5vmin,14px);font-weight:700;letter-spacing:.08em;
+  color:rgba(74,53,33,.34);pointer-events:none}
+#machineTag[hidden]{display:none}
+
+/* ===== 二重起動の警告（別タブでも開いているとき） ===== */
+#dupWarn{position:fixed;left:0;right:0;top:0;z-index:75;background:#C62828;color:#fff;
+  font-family:'Yu Gothic UI','Hiragino Sans',sans-serif;font-size:13px;font-weight:700;
+  padding:calc(8px + env(safe-area-inset-top)) 14px 8px;text-align:center;line-height:1.5}
+#dupWarn[hidden]{display:none}
+
+/* ===== 結果画面 ===== */
+#screen-result{z-index:50;background:rgba(255,251,243,.975);justify-content:center;gap:4.2vmin}
+.congrats{font-size:clamp(28px,7.4vmin,76px);font-weight:900;color:var(--gold-d);
+  text-shadow:.35vmin .35vmin 0 #fff,-.35vmin .35vmin 0 #fff,.35vmin -.35vmin 0 #fff,-.35vmin -.35vmin 0 #fff;
+  animation:popIn .5s cubic-bezier(.2,1.7,.4,1) both}
+.prize-card{position:relative;width:min(92vw,760px);background:var(--card);border-radius:4vmin;
+  padding:clamp(18px,3.6vmin,40px) clamp(14px,3vmin,34px);
+  box-shadow:var(--shadow);border:.7vmin solid var(--gold);text-align:center;
+  animation:popIn .55s .08s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes popIn{from{transform:scale(.5) rotate(-5deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
+.prize-card .ribbon{position:absolute;left:50%;top:calc(-1 * clamp(17px,3.4vmin,38px));transform:translateX(-50%);
+  background:var(--red);color:#fff;font-weight:900;font-size:clamp(14px,2.8vmin,29px);
+  padding:.42em 1.6em;border-radius:999px;white-space:nowrap;box-shadow:0 .6vmin 0 var(--red-d)}
+/* 「〇〇賞」は、出展者名を枠で囲って「賞」と切り離す。
+   くっついていると、どこまでが団体名か一目で分からないため。 */
+.giver{margin-top:1.8vmin;display:flex;align-items:center;justify-content:center;
+  gap:.45em;flex-wrap:wrap;line-height:1.25}
+.giver-badge{display:inline-flex;flex-direction:column;align-items:center;
+  background:#FFF6E6;border:.45vmin solid var(--red);border-radius:2.2vmin;
+  padding:.42em .85em;max-width:min(74vw,560px)}
+.giver-name{font-size:clamp(20px,4.7vmin,48px);font-weight:900;color:var(--red-d);letter-spacing:.01em}
+.giver-kana{margin-top:.3em;font-size:clamp(11px,2.2vmin,22px);font-weight:700;color:var(--ink-l);letter-spacing:.04em}
+.giver-kana[hidden]{display:none}
+.giver-sho{display:inline-flex;flex-direction:column;align-items:center;color:var(--gold-d)}
+.giver-sho .sho-kanji{font-size:clamp(19px,4.2vmin,44px);font-weight:900}
+.giver-sho .sho-kana{margin-top:.3em;font-size:clamp(11px,2.2vmin,22px);font-weight:700;opacity:.85}
+.item-kids{margin-top:2.2vmin;font-size:clamp(19px,4.4vmin,46px);font-weight:900;line-height:1.4;
+  white-space:pre-line;color:var(--ink)}
+.staff-note{margin-top:1.6vmin;font-size:clamp(14px,2.9vmin,29px);font-weight:900;color:var(--blue)}
+#confetti{position:fixed;inset:0;z-index:55;pointer-events:none}
+
+/* ===== 品切れ画面 ===== */
+#screen-empty{z-index:50;background:rgba(255,251,243,.97);justify-content:center;gap:3vmin;text-align:center}
+#screen-empty .big{font-size:clamp(24px,6vmin,58px);font-weight:900;color:var(--red-d);line-height:1.5}
+
+/* ===== 管理画面（スタッフ用・通常UI） ===== */
+#admin{position:fixed;inset:0;z-index:80;background:#F7F7F8;color:#222;overflow:auto;
+  font-family:'Yu Gothic UI','Hiragino Sans','Meiryo',system-ui,sans-serif;
+  -webkit-overflow-scrolling:touch;padding-bottom:6vh}
+#admin[hidden]{display:none}
+#admin header{position:sticky;top:0;z-index:2;background:#2F3A45;color:#fff;
+  padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+#admin header h2{font-size:17px;margin-right:auto}
+#admin .inner{padding:14px 16px;max-width:1000px;margin:0 auto}
+#admin .cards{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+#admin .stat{background:#fff;border-radius:10px;padding:10px 16px;box-shadow:0 1px 3px rgba(0,0,0,.12);min-width:130px}
+#admin .stat span{display:block;font-size:11px;color:#777}
+#admin .stat b{font-size:24px;font-variant-numeric:tabular-nums}
+#admin .row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.abtn{-webkit-appearance:none;appearance:none;border:1px solid #C8CDD3;background:#fff;color:#222;
+  font-family:inherit;font-size:14px;font-weight:700;padding:11px 16px;border-radius:9px;cursor:pointer;min-height:44px}
+.abtn:active{background:#EDEFF2}
+.abtn.primary{background:#2D8CF0;border-color:#2D8CF0;color:#fff}
+.abtn.danger{background:#fff;border-color:#E23B3B;color:#E23B3B}
+.abtn.ghost{background:transparent;border-color:rgba(255,255,255,.55);color:#fff}
+#admin table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;
+  box-shadow:0 1px 3px rgba(0,0,0,.12);font-size:13px}
+#admin th,#admin td{padding:8px 8px;border-bottom:1px solid #ECEEF1;text-align:left;vertical-align:middle}
+#admin th{background:#EEF1F4;font-size:12px;color:#555;position:sticky;top:0}
+#admin td.num,#admin th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+#admin tr.zero td{color:#B0B0B0;background:#FAFAFA}
+#admin tr.low td.num.remain{color:#E23B3B;font-weight:700}
+.stepper{display:inline-flex;align-items:center;gap:4px}
+.stepper button{width:36px;height:36px;border:1px solid #C8CDD3;background:#fff;border-radius:8px;font-size:17px;font-weight:700;cursor:pointer}
+.stepper input{width:62px;height:36px;border:1px solid #C8CDD3;border-radius:8px;text-align:right;
+  font-family:inherit;font-size:14px;padding:0 7px}
+#admin h3{font-size:14px;margin:22px 0 8px;color:#444}
+#admin .note{font-size:12px;color:#777;line-height:1.7;margin-top:8px}
+#admin textarea{width:100%;height:150px;font-family:ui-monospace,Consolas,monospace;font-size:11px;
+  border:1px solid #C8CDD3;border-radius:8px;padding:10px;margin-top:8px}
+#admin .warn{background:#FFF3CD;border:1px solid #FFE08A;color:#7A5B00;padding:10px 12px;border-radius:8px;
+  font-size:13px;line-height:1.6;margin-bottom:12px}
+#hist{font-size:12px;line-height:1.9;background:#fff;border-radius:10px;padding:10px 14px;
+  box-shadow:0 1px 3px rgba(0,0,0,.12);max-height:34vh;overflow:auto}
+#hist div{border-bottom:1px dotted #E7E9EC;padding:2px 0}
+
+/* ===== 確認ダイアログ ===== */
+#ask{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.45);display:grid;place-items:center;padding:5vmin}
+#ask[hidden]{display:none}
+#ask .box{background:#fff;border-radius:16px;padding:22px;max-width:440px;width:100%;
+  box-shadow:0 12px 40px rgba(0,0,0,.3);font-family:'Yu Gothic UI','Hiragino Sans',sans-serif}
+#ask p{font-size:15px;line-height:1.7;margin-bottom:16px;white-space:pre-line}
+#ask .box{max-height:86vh;overflow:auto}
+#ask .btns{display:flex;gap:8px;justify-content:flex-end}
+
+/* ===== かんり画面への歯車ボタン（左上・控えめ） ===== */
+#gearBtn{position:fixed;left:calc(1.5vmin + env(safe-area-inset-left));top:calc(1.5vmin + env(safe-area-inset-top));
+  z-index:71;width:max(46px,7vmin);height:max(46px,7vmin);padding:0;border:none;border-radius:50%;cursor:pointer;
+  -webkit-appearance:none;appearance:none;display:grid;place-items:center;
+  background:rgba(255,255,255,.55);color:rgba(74,53,33,.5);box-shadow:0 1px 4px rgba(120,70,20,.18)}
+#gearBtn:active{background:rgba(255,255,255,.85)}
+#gearBtn svg{width:58%;height:58%}
+
+/* ===== パスワード入力 ===== */
+#pw{position:fixed;inset:0;z-index:92;background:rgba(0,0,0,.5);display:grid;place-items:center;padding:5vmin}
+#pw[hidden]{display:none}
+#pw .box{background:#fff;border-radius:16px;padding:22px;max-width:420px;width:100%;
+  box-shadow:0 12px 40px rgba(0,0,0,.3);font-family:'Yu Gothic UI','Hiragino Sans',sans-serif;color:#222}
+#pw p{font-size:15px;line-height:1.7;margin-bottom:12px;white-space:pre-line}
+#pw input{width:100%;height:48px;border:1px solid #C8CDD3;border-radius:9px;padding:0 12px;font-size:18px;
+  font-family:inherit;margin-bottom:8px;-webkit-user-select:text;user-select:text}
+#pw .err{min-height:1.6em;font-size:13px;color:#C62828;font-weight:700;margin-bottom:8px}
+#pw .btns{display:flex;gap:8px;justify-content:flex-end}
+
+#remainList{width:100%;border-collapse:collapse;background:#fff;font-size:15px}
+#admin #remainList td{padding:9px 10px}
+#admin #remainList td.num{font-size:17px;font-weight:700}
+#admin #remainList tr.sum td{background:#EEF1F4;font-weight:700}
+#remainHead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:22px 0 8px}
+#remainHead h3{margin:0}
+#remainOutNames{font-size:12px;color:#777;line-height:1.7;margin-top:8px}
+
+@media (prefers-reduced-motion: reduce){
+  .deco i,.big-btn{animation:none}
+}
+</style>
+</head>
+<body>
+
+<div class="deco" id="deco"></div>
+
+<!-- ============ メイン（スタート／抽選中） ============ -->
+<section class="screen" id="screen-main">
+  <div class="title">
+    <div class="sub">ぼうさいフェスタ スタンプラリー</div>
+    <div class="main">ガラガラくじ</div>
+  </div>
+
+  <div class="machine-wrap" id="machineWrap">
+    <svg class="machine" id="machine" viewBox="0 0 430 400" aria-label="ガラガラ抽選器">
+      <defs>
+        <linearGradient id="gDrum" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#FF6E5E"/><stop offset="55%" stop-color="#E23B3B"/><stop offset="100%" stop-color="#A82525"/>
+        </linearGradient>
+        <linearGradient id="gGold" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#FFE38A"/><stop offset="50%" stop-color="#FFC93C"/><stop offset="100%" stop-color="#D99400"/>
+        </linearGradient>
+        <linearGradient id="gWood" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#C98A4B"/><stop offset="100%" stop-color="#96602C"/>
+        </linearGradient>
+        <linearGradient id="gTray" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#FFE8B8"/><stop offset="100%" stop-color="#E8B96B"/>
+        </linearGradient>
+        <radialGradient id="gBall" cx="34%" cy="28%">
+          <stop offset="0%" stop-color="#fff" stop-opacity=".95"/>
+          <stop offset="45%" stop-color="#fff" stop-opacity=".15"/>
+          <stop offset="100%" stop-color="#000" stop-opacity=".28"/>
+        </radialGradient>
+      </defs>
+
+      <!-- 台座 -->
+      <path d="M175 250 L305 250 L322 352 L158 352 Z" fill="url(#gWood)"/>
+      <rect x="140" y="350" width="200" height="22" rx="8" fill="#7C4E22"/>
+      <rect x="175" y="250" width="130" height="10" rx="4" fill="#B37A40"/>
+      <!-- 受け皿 -->
+      <path d="M34 268 L166 268 L152 316 L48 316 Z" fill="url(#gTray)" stroke="#C99242" stroke-width="3"/>
+      <ellipse cx="100" cy="268" rx="66" ry="11" fill="#FFF3D6" stroke="#C99242" stroke-width="3"/>
+      <!-- 出口シュート -->
+      <path d="M150 196 L196 226 L172 262 L126 232 Z" fill="#C6C9CE"/>
+      <path d="M150 196 L196 226 L188 238 L142 208 Z" fill="#E4E7EA"/>
+      <!-- ドラム支柱 -->
+      <rect x="222" y="140" width="16" height="120" rx="6" fill="#8C5A2B"/>
+
+      <!-- 回転部（ドラム＋ハンドル）。中心は(230,140)。
+           ハンドルはドラムの手前で回るクランク型にしている（長い棒だと台座を突き抜けて見えるため） -->
+      <g transform="translate(230,140)">
+        <g id="drum">
+          <polygon points="92.4,38.3 38.3,92.4 -38.3,92.4 -92.4,38.3 -92.4,-38.3 -38.3,-92.4 38.3,-92.4 92.4,-38.3"
+                   fill="url(#gDrum)" stroke="url(#gGold)" stroke-width="9" stroke-linejoin="round"/>
+          <polygon points="63,26 26,63 -26,63 -63,26 -63,-26 -26,-63 26,-63 63,-26"
+                   fill="none" stroke="#FFD873" stroke-width="4" opacity=".75"/>
+          <path d="M0,-46 L11,-16 L43,-16 L17,3 L27,33 L0,15 L-27,33 L-17,3 L-43,-16 L-11,-16 Z" fill="#FFE9A8"/>
+        </g>
+        <g id="handle">
+          <rect x="-6" y="-8" width="66" height="16" rx="8" fill="url(#gGold)" stroke="#B57F00" stroke-width="2.5"/>
+          <circle cx="0" cy="0" r="15" fill="#FFF6D8" stroke="#B57F00" stroke-width="3"/>
+          <circle cx="60" cy="0" r="20" fill="url(#gGold)" stroke="#B57F00" stroke-width="3"/>
+          <circle cx="60" cy="0" r="8" fill="#B57F00" opacity=".45"/>
+        </g>
+      </g>
+
+      <!-- 出てくる玉 -->
+      <g id="ballG">
+        <circle id="ballC" cx="152" cy="222" r="21" fill="#2D8CF0"/>
+        <circle cx="152" cy="222" r="21" fill="url(#gBall)"/>
+      </g>
+    </svg>
+  </div>
+
+  <div class="foot">
+    <button class="big-btn" id="drawBtn">ハンドルを まわす！</button>
+    <div class="hint" id="mainHint">スタンプを ぜんぶ あつめたら 1かい ひけるよ！</div>
+  </div>
+</section>
+
+<!-- ============ 結果 ============ -->
+<section class="screen" id="screen-result" hidden>
+  <div class="congrats" id="congrats">おめでとう！</div>
+  <div class="prize-card">
+    <div class="ribbon">あたり！</div>
+    <div class="giver">
+      <span class="giver-badge">
+        <span class="giver-name" id="rGiver"></span>
+        <span class="giver-kana" id="rGiverKana"></span>
+      </span>
+      <span class="giver-sho"><span class="sho-kanji">賞</span><span class="sho-kana">しょう</span></span>
+    </div>
+    <div class="item-kids" id="rKids"></div>
+  </div>
+  <div class="staff-note">この がめんを スタッフに みせてね</div>
+  <div class="foot"><button class="big-btn blue" id="nextBtn" disabled>つぎの ひとへ</button></div>
+</section>
+
+<!-- ============ 品切れ ============ -->
+<section class="screen" id="screen-empty" hidden>
+  <div></div>
+  <div class="big">けいひんは<br>ぜんぶ なくなりました<br><span style="font-size:.55em;color:#8A7156">スタッフを よんでください</span></div>
+  <div class="foot"><button class="big-btn blue" id="emptyBackBtn">もどる</button></div>
+</section>
+
+<canvas id="confetti"></canvas>
+<div id="dupWarn" hidden></div>
+<div id="machineTag" hidden></div>
+<div id="staffPanel" aria-hidden="true"></div>
+<div id="adminHot" aria-hidden="true"></div>
+<button id="gearBtn" aria-label="かんり画面"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.14 12.94c.04-.31.06-.62.06-.94s-.02-.63-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.62l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.03 7.03 0 0 0-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.4h-3.84a.48.48 0 0 0-.48.4l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.72 8.86a.48.48 0 0 0 .12.62l2.03 1.58c-.05.31-.07.63-.07.94s.02.63.07.94l-2.03 1.58a.49.49 0 0 0-.12.62l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.4.48.4h3.84c.24 0 .44-.16.48-.4l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.48.48 0 0 0-.12-.62l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg></button>
+
+<!-- ============ パスワード入力 ============ -->
+<div id="pw" hidden>
+  <div class="box">
+    <p id="pwText"></p>
+    <input type="password" id="pwIn" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <div class="err" id="pwErr"></div>
+    <div class="btns">
+      <button class="abtn" id="pwNo">やめる</button>
+      <button class="abtn primary" id="pwYes">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 管理画面 ============ -->
+<div id="admin" hidden>
+  <header>
+    <h2 id="adminTitle">かんり画面（スタッフ用）</h2>
+    <button class="abtn ghost" id="soundToggle">音：ON</button>
+    <button class="abtn ghost" id="adminClose">とじる</button>
+  </header>
+  <div class="inner">
+    <div class="warn" id="storeWarn" hidden></div>
+    <div class="note" id="offlineState" style="margin:0 0 10px;font-weight:700"></div>
+    <div class="cards">
+      <div class="stat"><span>のこり</span><b id="sRemain">-</b></div>
+      <div class="stat"><span>はらいだし</span><b id="sOut">-</b></div>
+      <div class="stat"><span>もともとの合計</span><b id="sInit">-</b></div>
+      <div class="stat"><span>景品の種類（在庫あり）</span><b id="sKinds">-</b></div>
+    </div>
+    <div class="row">
+      <button class="abtn primary" id="undoBtn">直前の1件を取り消す</button>
+      <button class="abtn" id="csvStock">在庫CSVを保存</button>
+      <button class="abtn" id="csvHist">払い出し履歴CSVを保存</button>
+      <button class="abtn danger" id="resetBtn">在庫を初期値に戻す</button>
+    </div>
+
+    <h3>在庫（＋−で手直しできます）</h3>
+    <table>
+      <thead><tr><th>出展者</th><th>景品</th><th class="num">初期</th><th class="num">払出</th><th class="num">残り</th><th>手直し</th></tr></thead>
+      <tbody id="stockBody"></tbody>
+    </table>
+    <div class="note">
+      ・くじは「残りが多い景品ほど出やすい」重み付き抽選です。残り0になった景品は自動的に出なくなります。<br>
+      ・この画面は 3分間 さわらないと自動で閉じます。在庫のリセットにはパスワードが必要です。<br>
+      ・在庫はこの端末の中（ブラウザ）に保存されます。別の端末とは共有されません。<br>
+      ・プライベートブラウズでは保存されない場合があります。通常のタブで使ってください。
+    </div>
+
+    <div id="remainHead">
+      <h3>のこっている景品の一覧（終わったあとの数え・翌日への引き継ぎ用）</h3>
+      <button class="abtn primary" id="csvRemain">残数一覧CSVを保存</button>
+    </div>
+    <table id="remainList">
+      <thead><tr><th>出展者</th><th>景品</th><th class="num">のこり</th></tr></thead>
+      <tbody id="remainBody"></tbody>
+    </table>
+    <div id="remainOutNames"></div>
+    <div class="note">
+      ・この一覧は【この端末の分】です。会場にある実物の残りは、同じ日のもう1台の一覧と足した数になります。<br>
+      ・翌日に回す場合は、翌日のファイルの「在庫（＋−で手直しできます）」で残数を足してください。
+    </div>
+
+    <h3>払い出し履歴（新しい順・最新50件）</h3>
+    <div id="hist"></div>
+
+    <h3>CSVがうまく保存できないとき</h3>
+    <div class="note">下の欄に出た内容を選んでコピーし、メールやメモ帳に貼り付けてください。</div>
+    <textarea id="csvOut" readonly placeholder="上のCSVボタンを押すと、ここにも内容が出ます"></textarea>
+
+    <h3>バックアップと復元</h3>
+    <div class="note">
+      下の欄が、在庫と払い出し履歴のすべてです。「コピー」を押してメモアプリやメールに貼っておけば、
+      万一データが消えても、その文字を貼り付けて元に戻せます。<br>
+      休憩時など、ときどきコピーして控えておくと安心です。
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button class="abtn" id="backupCopy">バックアップをコピー</button>
+      <button class="abtn primary" id="restoreBtn">下の内容で復元する</button>
+      <button class="abtn" id="undoResetBtn">ひとつ前の状態に戻す</button>
+    </div>
+    <textarea id="backupOut" placeholder="ここにバックアップの文字が出ます（貼り付けて復元することもできます）"></textarea>
+  </div>
+</div>
+
+<!-- ============ 確認ダイアログ ============ -->
+<div id="ask" hidden>
+  <div class="box">
+    <p id="askText"></p>
+    <div class="btns">
+      <button class="abtn" id="askNo">いいえ</button>
+      <button class="abtn primary" id="askYes">はい</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* =====================================================================
+   ぼうさいフェスタ ガラガラくじ
+   - 単一HTMLファイルで動作（ネット接続・外部ファイル一切不要）
+   - 在庫はブラウザの localStorage に保存（端末内・1台運用前提）
+   - 景品データは _work/build_html.py がエクセルから流し込んでいます
+   ===================================================================== */
+
+/* ---- 景品データ（エクセルから自動生成） ---- */
+const PRIZE_DATA = [
+  {
+    "id": "P01",
+    "giver": "高知県",
+    "giverKana": "こうちけん",
+    "item": "缶バッチ（高知県防災キャラクター）",
+    "kids": "かんバッジ\n（こうちけんの ぼうさいキャラクター）",
+    "unit": "個",
+    "stock": 51
+  },
+  {
+    "id": "P09",
+    "giver": "ダイドータケナカベンディング",
+    "giverKana": "だいどーたけなかべんでぃんぐ",
+    "item": "飲料（水）",
+    "kids": "おみず",
+    "unit": "本",
+    "stock": 24
+  },
+  {
+    "id": "P10",
+    "giver": "ダイドータケナカベンディング",
+    "giverKana": "だいどーたけなかべんでぃんぐ",
+    "item": "飲料（レモネード）",
+    "kids": "レモネード",
+    "unit": "本",
+    "stock": 16
+  },
+  {
+    "id": "P11",
+    "giver": "中村防災サービス",
+    "giverKana": "なかむらぼうさいさーびす",
+    "item": "非常食（きんぴらごぼう）",
+    "kids": "ひじょうしょく\n（きんぴらごぼう）",
+    "unit": "缶",
+    "stock": 24
+  },
+  {
+    "id": "P12",
+    "giver": "四国電力グループ",
+    "giverKana": "しこくでんりょくぐるーぷ",
+    "item": "ボールペン（iPad等のタッチペン\nスマホスタンド、LEDライト付）",
+    "kids": "たかのう ボールペン\n（タッチペン・スタンド・ライトつき）",
+    "unit": "本",
+    "stock": 31
+  },
+  {
+    "id": "P13",
+    "giver": "ネッツトヨタ高知",
+    "giverKana": "ねっととよたこうち",
+    "item": "ザル付き新鮮保存容器",
+    "kids": "ザルつき ほぞんようき",
+    "unit": "個",
+    "stock": 4
+  },
+  {
+    "id": "P14",
+    "giver": "日産サティオ高知",
+    "giverKana": "にっさんさてぃおこうち",
+    "item": "ライト＆ホイッスル",
+    "kids": "ライト と ホイッスル",
+    "unit": "個",
+    "stock": 17
+  },
+  {
+    "id": "P15",
+    "giver": "高知ダイハツ",
+    "giverKana": "こうちだいはつ",
+    "item": "ブリーザーバッグ（5枚入り）",
+    "kids": "ブリーザーバッグ\n（5まい いり）",
+    "unit": "セット",
+    "stock": 10
+  },
+  {
+    "id": "P16",
+    "giver": "自販連",
+    "giverKana": "じはんれん",
+    "item": "水も火もいらないそのまま食べれるおにぎり（3種類／セット）",
+    "kids": "そのまま たべられる おにぎり\n（3しゅるい セット）",
+    "unit": "セット",
+    "stock": 5
+  },
+  {
+    "id": "P17",
+    "giver": "技研製作所",
+    "giverKana": "ぎけんせいさくしょ",
+    "item": "メダルマグネット",
+    "kids": "メダルマグネット",
+    "unit": "個",
+    "stock": 7
+  },
+  {
+    "id": "P18",
+    "giver": "ドルチェかがみ",
+    "giverKana": "どるちぇかがみ",
+    "item": "50円引き",
+    "kids": "50えんびき けん",
+    "unit": "枚",
+    "stock": 5
+  },
+  {
+    "id": "P19",
+    "giver": "てぃーだぬ工房",
+    "giverKana": "てぃーだぬこうぼう",
+    "item": "ドリップコーヒーギフトセット",
+    "kids": "ドリップコーヒー ギフトセット",
+    "unit": "個",
+    "stock": 1
+  },
+  {
+    "id": "P20",
+    "giver": "高南メディカル",
+    "giverKana": "こうなんめでぃかる",
+    "item": "100円引き",
+    "kids": "100えんびき けん",
+    "unit": "枚",
+    "stock": 34
+  },
+  {
+    "id": "P21",
+    "giver": "リベルタ",
+    "giverKana": "りべるた",
+    "item": "100円引き",
+    "kids": "100えんびき けん",
+    "unit": "枚",
+    "stock": 7
+  },
+  {
+    "id": "P22",
+    "giver": "NOVE",
+    "giverKana": "のーべ",
+    "item": "100円引き",
+    "kids": "100えんびき けん",
+    "unit": "枚",
+    "stock": 7
+  },
+  {
+    "id": "P24",
+    "giver": "菓子工房なっちゃる",
+    "giverKana": "かしこうぼうなっちゃる",
+    "item": "柑橘アイスキャンディー",
+    "kids": "かんきつ アイスキャンディー",
+    "unit": "本",
+    "stock": 2
+  },
+  {
+    "id": "P25",
+    "giver": "澤餅茶屋",
+    "giverKana": "さわもちちゃや",
+    "item": "手結山（ていやま）の餅100円引き",
+    "kids": "ていやまのもち 100えんびき けん",
+    "unit": "枚",
+    "stock": 6
+  },
+  {
+    "id": "P26",
+    "giver": "NTTドコモビジネスソリューションズ株式会社",
+    "giverKana": "エヌ・ティ・ティ・ドコモ",
+    "item": "おーいお茶",
+    "kids": "おちゃ（おーいおちゃ）",
+    "unit": "本",
+    "stock": 10
+  }
+];
+const DATA_VERSION = "450f7a1c24";
+/* 日付・号機ごとに保存場所を分けてある。同じ端末で複数開いても在庫は混ざらない。 */
+const STORE_KEY = "bosai_kuji_v2_1003_m1";
+const MACHINE_LABEL = "10/3・1号機";
+const MACHINE_NO = 1;
+const EVENT_DATE = "2026-10-03";   // この日に使うファイル
+const DAY_LABEL = "10/3";
+const FILE_TAG = "1003_1号機";
+
+/* ---- 玉／紙吹雪の色（景品ごとに固定） ---- */
+const COLORS = ["#E23B3B","#2D8CF0","#3DBE6B","#FFC93C","#A15BD6","#FF8A3D"];
+const colorOf = p => COLORS[PRIZE_DATA.findIndex(x => x.id === p.id) % COLORS.length];
+
+const $ = id => document.getElementById(id);
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+/* =========================== 保存まわり ===========================
+   在庫が消えると当日の運用が破綻するため、次の3段構えにしている。
+   1) 書き込んだあと読み直して、本当に保存できたか毎回確かめる
+   2) 1つ前の状態を別キーに残す（誤ってリセットした場合の巻き戻し用）
+   3) 管理画面から全データを文字列でコピーして、端末の外に控えられる     */
+const PREV_KEY = STORE_KEY + "_prev";
+const store = {
+  ok: true,
+  load(){
+    try{ const s = localStorage.getItem(STORE_KEY); return s ? JSON.parse(s) : null; }
+    catch(e){ this.ok = false; return null; }
+  },
+  save(st){
+    try{
+      const json = JSON.stringify(st);
+      localStorage.setItem(STORE_KEY, json);
+      if(localStorage.getItem(STORE_KEY) !== json) throw new Error("保存を確認できませんでした");
+      this.ok = true;
+    }catch(e){
+      this.ok = false;
+      showStoreWarn();
+    }
+  },
+  /* 取り返しのつかない操作（初期化・復元）の直前に、今の状態を退避しておく */
+  keepPrev(st){
+    try{ localStorage.setItem(PREV_KEY, JSON.stringify(st)); }catch(e){}
+  },
+  loadPrev(){
+    try{ const s = localStorage.getItem(PREV_KEY); return s ? JSON.parse(s) : null; }catch(e){ return null; }
+  }
+};
+
+function freshState(){
+  return {
+    version: DATA_VERSION,
+    startedAt: new Date().toISOString(),
+    sound: true,
+    prizes: PRIZE_DATA.map(p => ({ id:p.id, remain:p.stock, initial:p.stock })),
+    history: []
+  };
+}
+
+let isFirstRun = false;
+let state = (function(){
+  const saved = store.load();
+  if(saved && saved.version === DATA_VERSION && Array.isArray(saved.prizes)) return saved;
+  isFirstRun = true;
+  if(saved){
+    // 景品データを差し替えた場合。古い状態は退避してから作り直す
+    try{ localStorage.setItem(STORE_KEY + "_backup_" + Date.now(), JSON.stringify(saved)); }catch(e){}
+  }
+  const st = freshState();
+  store.save(st);
+  return st;
+})();
+
+const master = id => PRIZE_DATA.find(p => p.id === id);
+const stockOf = id => state.prizes.find(p => p.id === id);
+const totalRemain = () => state.prizes.reduce((s,p) => s + p.remain, 0);
+const totalInitial = () => state.prizes.reduce((s,p) => s + p.initial, 0);
+
+function showStoreWarn(){
+  const el = $("storeWarn");
+  el.hidden = false;
+  el.textContent = "この端末では在庫を保存できていません（プライベートブラウズなどの可能性）。画面を閉じると在庫がリセットされます。通常のタブで開き直してください。";
+}
+
+/* =========================== 抽選 =========================== */
+/* 残りの個数に比例した重み付き抽選。
+   例）残150個の缶バッジと残3個のコーヒーが同じ確率で出ると、
+   少ない景品が先に品切れになってしまうため、残数比例にして最後まで均等に減らす。 */
+function pickPrize(){
+  const avail = state.prizes.filter(p => p.remain > 0);
+  if(!avail.length) return null;
+  const total = avail.reduce((s,p) => s + p.remain, 0);
+  let r = Math.random() * total;
+  for(const p of avail){ r -= p.remain; if(r < 0) return p; }
+  return avail[avail.length - 1];
+}
+
+function commit(stock){
+  stock.remain -= 1;
+  state.history.push({ t: new Date().toISOString(), id: stock.id });
+  store.save(state);
+  refreshStaffPanel();
+}
+
+/* =========================== 音（外部ファイル不要） =========================== */
+const sound = {
+  ctx:null,
+  get on(){ return state.sound !== false; },
+  init(){
+    try{
+      if(!this.ctx){ const C = window.AudioContext || window.webkitAudioContext; if(C) this.ctx = new C(); }
+      if(this.ctx && this.ctx.state === "suspended") this.ctx.resume();
+    }catch(e){ this.ctx = null; }
+  },
+  tone(when, freq, dur, type, vol){
+    if(!this.on || !this.ctx) return;
+    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.type = type || "triangle";
+    o.frequency.setValueAtTime(freq, when);
+    g.gain.setValueAtTime(0.0001, when);
+    g.gain.exponentialRampToValueAtTime(vol || 0.18, when + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+    o.connect(g); g.connect(this.ctx.destination);
+    o.start(when); o.stop(when + dur + 0.02);
+  },
+  rattle(ms){                     // ガラガラ回転中のカラカラ音
+    if(!this.on || !this.ctx) return;
+    const t0 = this.ctx.currentTime;
+    for(let t = 0; t < ms/1000; t += 0.042 + Math.random()*0.032){
+      this.tone(t0 + t, 320 + Math.random()*620, 0.045, "triangle", 0.12);
+    }
+  },
+  pop(){                          // 玉が出る音
+    if(!this.on || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    this.tone(t, 300, 0.10, "sine", 0.22);
+    this.tone(t + 0.06, 720, 0.14, "sine", 0.20);
+  },
+  fanfare(){                      // 当たりのファンファーレ
+    if(!this.on || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    [523.25, 659.25, 783.99, 1046.5].forEach((f,i) => this.tone(t + i*0.11, f, 0.30, "triangle", 0.20));
+    this.tone(t + 0.44, 1318.5, 0.55, "triangle", 0.16);
+  }
+};
+
+/* =========================== 紙吹雪 =========================== */
+const confetti = (function(){
+  const cv = $("confetti"), cx = cv.getContext("2d");
+  let parts = [], raf = 0;
+  function resize(){
+    const d = window.devicePixelRatio || 1;
+    cv.width = innerWidth * d; cv.height = innerHeight * d;
+    cv.style.width = innerWidth + "px"; cv.style.height = innerHeight + "px";
+    cx.setTransform(d,0,0,d,0,0);
+  }
+  addEventListener("resize", resize); resize();
+  function loop(){
+    cx.clearRect(0,0,innerWidth,innerHeight);
+    parts = parts.filter(p => p.y < innerHeight + 40);
+    for(const p of parts){
+      p.x += p.vx; p.y += p.vy; p.vy += 0.14; p.rot += p.vr;
+      cx.save(); cx.translate(p.x,p.y); cx.rotate(p.rot);
+      cx.fillStyle = p.c; cx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+      cx.restore();
+    }
+    raf = parts.length ? requestAnimationFrame(loop) : 0;
+  }
+  return {
+    burst(main){
+      const cols = [main, "#FFC93C", "#FF8A3D", "#2D8CF0", "#3DBE6B", "#E23B3B", "#FFFFFF"];
+      /* 紙吹雪は結果カードの手前を通るので、賞名が読めなくなる時間が長くならないよう
+         数をしぼり、少し小さく・速く落として 1.5 秒ほどで抜けきるようにしている。 */
+      for(let i = 0; i < 120; i++){
+        parts.push({
+          x: innerWidth * (0.08 + Math.random()*0.84),
+          y: -20 - Math.random()*innerHeight*0.5,
+          vx: (Math.random()-0.5)*3.4, vy: 2.4 + Math.random()*3.6,
+          w: 6 + Math.random()*7, h: 9 + Math.random()*11,
+          rot: Math.random()*6.28, vr: (Math.random()-0.5)*0.28,
+          c: cols[(Math.random()*cols.length)|0]
+        });
+      }
+      if(!raf) raf = requestAnimationFrame(loop);
+    },
+    clear(){ parts = []; cx.clearRect(0,0,innerWidth,innerHeight); }
+  };
+})();
+
+/* ============ スタッフ用パネル（右上を軽くタップした時だけ出す） ============
+   子供の画面に残数が出ていると興ざめなので、ふだんは何も表示しない。
+   右上の角を軽くタップ＝この案内、1.5秒長押し＝かんり画面。 */
+let lastResult = null;          // いま結果画面に出ている景品（メイン画面では null）
+let panelTimer = null;
+
+function staffPanelHtml(){
+  const esc = s => String(s).replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+  let html = "";
+  if(lastResult){
+    const m = lastResult.m, s = lastResult.stock;
+    html += "<b>" + esc(m.giver) + "／" + esc(m.item.replace(/\n/g, " ")) + "</b><br>"
+          + "のこり " + s.remain + " " + esc(m.unit) + '<div class="sep"></div>';
+  }
+  if(MACHINE_LABEL) html += '<span class="small">この ファイルは【' + esc(MACHINE_LABEL) + '】</span><br>';
+  html += '<span class="small">' + (MACHINE_LABEL ? "この iPad の分　" : "ぜんたい　")
+        + "のこり " + totalRemain() + " こ ／ はらいだし " + state.history.length + " こ</span>";
+  if(!store.ok) html += '<div class="sep"></div><span class="small">⚠ 在庫を保存できていません</span>';
+  return html;
+}
+function showStaffPanel(){
+  const p = $("staffPanel");
+  p.innerHTML = staffPanelHtml();
+  p.classList.add("show");
+  clearTimeout(panelTimer);
+  panelTimer = setTimeout(hideStaffPanel, 6000);   // 出しっぱなしにならないよう自動で消す
+}
+function hideStaffPanel(){
+  clearTimeout(panelTimer);
+  $("staffPanel").classList.remove("show");
+}
+function toggleStaffPanel(){
+  $("staffPanel").classList.contains("show") ? hideStaffPanel() : showStaffPanel();
+}
+function refreshStaffPanel(){
+  if($("staffPanel").classList.contains("show")) showStaffPanel();
+}
+
+/* =========================== 画面の描画 =========================== */
+function showResult(m, stock){
+  const c = colorOf(m);
+  /* 出展者名は「漢字で大きく＋下にひらがな」の2行にして枠で囲み、「賞」は枠の外に置く。
+     ルビ（振り仮名）だと文字が細かく散って子供には読みにくいため。 */
+  const kana = m.giverKana;
+  $("rGiver").textContent = m.giver;
+  $("rGiverKana").textContent = kana || "";
+  $("rGiverKana").hidden = !kana;
+  $("rKids").textContent = m.kids;
+  lastResult = { m: m, stock: stock };   // 右上タップで正式名と残数を出せるようにしておく
+  $("congrats").style.color = c;
+  $("screen-main").hidden = true;
+  $("screen-result").hidden = false;
+  confetti.burst(c);
+  sound.fanfare();
+  const nb = $("nextBtn");
+  nb.disabled = true;                       // 誤タップ防止。1.2秒後に押せるようにする
+  setTimeout(() => { nb.disabled = false; }, 1200);
+}
+
+function backToMain(){
+  confetti.clear();
+  lastResult = null;
+  hideStaffPanel();
+  $("screen-result").hidden = true;
+  $("screen-empty").hidden = true;
+  $("screen-main").hidden = false;
+  $("ballG").classList.remove("show");
+  $("machineWrap").classList.remove("spinning");
+  $("drawBtn").disabled = false;
+}
+
+/* =========================== 抽選の演出 =========================== */
+let busy = false;
+async function runDraw(){
+  if(busy) return;
+  hideStaffPanel();
+  sound.init();
+  const stock = pickPrize();
+  if(!stock){
+    $("screen-main").hidden = true;
+    $("screen-empty").hidden = false;
+    return;
+  }
+  busy = true;
+  $("drawBtn").disabled = true;
+
+  const m = master(stock.id);
+  $("ballC").setAttribute("fill", colorOf(m));
+
+  const wrap = $("machineWrap");
+  const SPIN = 2300;
+  wrap.style.setProperty("--spin", SPIN + "ms");
+  wrap.classList.remove("spinning");
+  void wrap.offsetWidth;                    // アニメーションを頭から再生させる
+  wrap.classList.add("spinning", "shaking");
+  sound.rattle(SPIN);
+
+  await wait(SPIN);
+  wrap.classList.remove("shaking");
+
+  const ball = $("ballG");
+  ball.classList.remove("show");
+  void ball.getBoundingClientRect();
+  ball.classList.add("show");
+  sound.pop();
+
+  await wait(1050);
+  commit(stock);
+  showResult(m, stock);
+  busy = false;
+}
+
+/* =========================== 管理画面 =========================== */
+function askConfirm(text){
+  return new Promise(res => {
+    $("askText").textContent = text;
+    $("ask").hidden = false;
+    const yes = () => { cleanup(); res(true); };
+    const no  = () => { cleanup(); res(false); };
+    function cleanup(){
+      $("ask").hidden = true;
+      $("askYes").removeEventListener("click", yes);
+      $("askNo").removeEventListener("click", no);
+    }
+    $("askYes").addEventListener("click", yes);
+    $("askNo").addEventListener("click", no);
+  });
+}
+
+/* お知らせだけのダイアログ（ボタン1つ） */
+function askInfo(text){
+  return new Promise(res => {
+    $("askText").textContent = text;
+    $("askNo").hidden = true;
+    $("askYes").textContent = "OK";
+    $("ask").hidden = false;
+    const done = () => {
+      $("ask").hidden = true;
+      $("askNo").hidden = false;
+      $("askYes").textContent = "はい";
+      $("askYes").removeEventListener("click", done);
+      res();
+    };
+    $("askYes").addEventListener("click", done);
+  });
+}
+
+function renderAdmin(){
+  const out = state.history.length;
+  $("sRemain").textContent = totalRemain();
+  $("sOut").textContent = out;
+  $("sInit").textContent = totalInitial();
+  $("sKinds").textContent = state.prizes.filter(p => p.remain > 0).length + " / " + state.prizes.length;
+  $("soundToggle").textContent = "音：" + (state.sound === false ? "OFF" : "ON");
+  if(!store.ok) showStoreWarn();
+
+  const body = $("stockBody");
+  body.innerHTML = "";
+  for(const s of state.prizes){
+    const m = master(s.id);
+    const tr = document.createElement("tr");
+    if(s.remain === 0) tr.className = "zero";
+    else if(s.remain <= 3) tr.className = "low";
+    tr.innerHTML =
+      "<td>" + m.giver + "</td>" +
+      "<td>" + m.item.replace(/\n/g, " ") + "</td>" +
+      '<td class="num">' + s.initial + "</td>" +
+      '<td class="num">' + (s.initial - s.remain) + "</td>" +
+      '<td class="num remain">' + s.remain + " " + m.unit + "</td>" +
+      '<td><span class="stepper"><button data-d="-1" data-id="' + s.id + '">−</button>' +
+      '<input type="number" min="0" value="' + s.remain + '" data-in="' + s.id + '">' +
+      '<button data-d="1" data-id="' + s.id + '">＋</button></span></td>';
+    body.appendChild(tr);
+  }
+
+  renderRemainList();
+  renderOffline();
+  $("backupOut").value = JSON.stringify(state);
+
+  const h = $("hist");
+  h.innerHTML = "";
+  const recent = state.history.slice(-50).reverse();
+  if(!recent.length){ h.innerHTML = '<div style="color:#999">まだ払い出しはありません</div>'; }
+  for(const rec of recent){
+    const m = master(rec.id);
+    const d = new Date(rec.t);
+    const hh = String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0") + ":" + String(d.getSeconds()).padStart(2,"0");
+    h.innerHTML += "<div>" + hh + "　" + (m ? m.giver + "／" + m.item.replace(/\n/g," ") : rec.id) + "</div>";
+  }
+}
+
+function openAdmin(){ hideStaffPanel(); $("admin").hidden = false; renderAdmin(); bumpAdminIdle(); }
+function closeAdmin(){ clearTimeout(adminIdleTimer); $("admin").hidden = true; }
+
+function saveCsv(name, rows){
+  const csv = rows.map(r => r.map(v => {
+    const s = String(v === undefined || v === null ? "" : v).replace(/\n/g, " ");
+    return /[",]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }).join(",")).join("\r\n");
+  $("csvOut").value = csv;
+  try{
+    const blob = new Blob(["﻿" + csv], { type:"text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  }catch(e){ /* 保存できない端末では下のテキスト欄からコピーしてもらう */ }
+}
+
+function stamp(){
+  const d = new Date(), p = n => String(n).padStart(2,"0");
+  return "" + d.getFullYear() + p(d.getMonth()+1) + p(d.getDate()) + "_" + p(d.getHours()) + p(d.getMinutes());
+}
+
+/* =========================== パスワード =========================== */
+/* 子供が かんり画面を開いたり、在庫をリセットしたりしないための鍵。
+   ソースに平文で置かないようハッシュで比較している（目隠し程度で、本格的な暗号ではない）。
+   全角・半角どちらで打っても通るよう NFKC で正規化する。 */
+const ADMIN_PW_HASH = 3889720313;
+const PW_MAX_FAIL = 5, PW_LOCK_MS = 30000;
+let pwFails = 0, pwLockUntil = 0;
+function pwHash(s){
+  let h = 0x811c9dc5;
+  for(let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  return h >>> 0;
+}
+const pwOk = s => pwHash(String(s).normalize("NFKC").trim()) === ADMIN_PW_HASH;
+
+function askPassword(text){
+  return new Promise(res => {
+    const box = $("pw"), inp = $("pwIn"), err = $("pwErr");
+    $("pwText").textContent = text;
+    inp.value = ""; err.textContent = "";
+    box.hidden = false;
+    setTimeout(() => inp.focus(), 50);
+    const finish = ok => {
+      box.hidden = true; inp.value = ""; inp.blur();
+      $("pwYes").removeEventListener("click", yes);
+      $("pwNo").removeEventListener("click", no);
+      inp.removeEventListener("keydown", key);
+      res(ok);
+    };
+    const yes = () => {
+      const now = Date.now();
+      if(now < pwLockUntil){
+        err.textContent = "まちがいが続いたため、あと " + Math.ceil((pwLockUntil - now)/1000) + " 秒 まってください";
+        return;
+      }
+      if(pwOk(inp.value)){ pwFails = 0; finish(true); return; }
+      pwFails++;
+      inp.value = "";
+      if(pwFails >= PW_MAX_FAIL){
+        pwFails = 0; pwLockUntil = now + PW_LOCK_MS;
+        err.textContent = "まちがいが続いたため、30 秒 入力できません";
+      }else{
+        err.textContent = "パスワードが ちがいます";
+      }
+    };
+    const no = () => finish(false);
+    const key = e => { if(e.key === "Enter"){ e.preventDefault(); yes(); } };
+    $("pwYes").addEventListener("click", yes);
+    $("pwNo").addEventListener("click", no);
+    inp.addEventListener("keydown", key);
+  });
+}
+
+/* かんり画面はパスワードを通してから開く（歯車・右上長押しの両方） */
+async function openAdminSecure(){
+  if(busy || !$("admin").hidden || !$("pw").hidden) return;
+  hideStaffPanel();
+  if(await askPassword("かんり画面の パスワードを 入力してください")) openAdmin();
+}
+
+/* 開きっぱなしで子供の手に渡らないよう、3分さわらなければ自動で閉じる */
+const ADMIN_IDLE_MS = 180000;
+let adminIdleTimer = null;
+function bumpAdminIdle(){
+  clearTimeout(adminIdleTimer);
+  if($("admin").hidden) return;
+  adminIdleTimer = setTimeout(() => {
+    $("ask").hidden = true; $("pw").hidden = true;
+    closeAdmin();
+  }, ADMIN_IDLE_MS);
+}
+["click","touchstart","input","scroll"].forEach(ev => $("admin").addEventListener(ev, bumpAdminIdle, { passive:true, capture:true }));
+
+/* =========================== イベント =========================== */
+$("drawBtn").addEventListener("click", runDraw);
+$("machineWrap").addEventListener("click", () => { if(!busy && $("screen-main").hidden === false) runDraw(); });
+$("nextBtn").addEventListener("click", backToMain);
+$("emptyBackBtn").addEventListener("click", backToMain);
+
+/* 右上の角： 軽くタップ → 残数の案内 ／ 1.5秒長押し → かんり画面（パスワード） */
+$("gearBtn").addEventListener("click", openAdminSecure);
+(function(){
+  const hot = $("adminHot");
+  let timer = null, longFired = false;
+  const start = () => {
+    longFired = false;
+    timer = setTimeout(async () => {
+      timer = null; longFired = true;
+      hideStaffPanel();
+      openAdminSecure();
+    }, 1500);
+  };
+  const end = () => {
+    if(timer){ clearTimeout(timer); timer = null; if(!longFired) toggleStaffPanel(); }
+  };
+  const cancel = () => { if(timer){ clearTimeout(timer); timer = null; } };
+  hot.addEventListener("touchstart", e => { e.preventDefault(); start(); }, {passive:false});
+  hot.addEventListener("touchend", e => { e.preventDefault(); end(); }, {passive:false});
+  hot.addEventListener("touchcancel", cancel);
+  hot.addEventListener("mousedown", start);
+  hot.addEventListener("mouseup", end);
+  hot.addEventListener("mouseleave", cancel);
+})();
+
+/* 別のタブ・別ウィンドウで同じアプリを開いて操作すると、
+   古い方が上書きして在庫が巻き戻る。検知したら新しい方に合わせて警告する。 */
+addEventListener("storage", e => {
+  if(e.key !== STORE_KEY || !e.newValue) return;
+  try{
+    const other = JSON.parse(e.newValue);
+    if(!other || other.version !== DATA_VERSION) return;
+    state = other;
+    refreshStaffPanel();
+    if(!$("admin").hidden) renderAdmin();
+    const w = $("dupWarn");
+    w.textContent = "このアプリを 2つ以上のタブ（ウィンドウ）で開いています。1つだけにしてください。";
+    w.hidden = false;
+  }catch(err){}
+});
+
+$("adminClose").addEventListener("click", closeAdmin);
+
+$("soundToggle").addEventListener("click", () => {
+  state.sound = (state.sound === false);
+  store.save(state); renderAdmin();
+  if(state.sound){ sound.init(); sound.pop(); }
+});
+
+$("undoBtn").addEventListener("click", async () => {
+  if(!state.history.length){ await askInfo("取り消せる払い出しがありません。"); return; }
+  const last = state.history[state.history.length - 1];
+  const m = master(last.id);
+  const ok = await askConfirm("直前の1件を取り消して、在庫を1つ戻します。\n\n" + (m ? m.giver + "／" + m.item.replace(/\n/g," ") : last.id) + "\n\nよろしいですか？");
+  if(!ok) return;
+  state.history.pop();
+  const s = stockOf(last.id);
+  if(s) s.remain += 1;
+  store.save(state); renderAdmin();
+});
+
+$("resetBtn").addEventListener("click", async () => {
+  if(!await askPassword("在庫を初期値に戻すには、もう一度 パスワードを 入力してください")) return;
+  const ok1 = await askConfirm("在庫をすべて初期値に戻し、払い出し履歴も消します。\nよろしいですか？");
+  if(!ok1) return;
+  const ok2 = await askConfirm("本当に初期化しますか？\n（当日の途中で押すと、それまでの記録が消えます）\n\n押し間違えた場合は、下の「ひとつ前の状態に戻す」で戻せます。");
+  if(!ok2) return;
+  store.keepPrev(state);          // 押し間違えても戻せるように退避しておく
+  state = freshState();
+  store.save(state); renderAdmin();
+});
+
+/* ---- バックアップ・復元 ---- */
+$("backupCopy").addEventListener("click", async () => {
+  const ta = $("backupOut");
+  ta.value = JSON.stringify(state);
+  ta.focus(); ta.select();
+  let copied = false;
+  try{ await navigator.clipboard.writeText(ta.value); copied = true; }catch(e){}
+  if(!copied){ try{ copied = document.execCommand("copy"); }catch(e){} }
+  await askInfo(copied
+    ? "バックアップをコピーしました。\nメモアプリやメールに貼り付けて保管してください。"
+    : "自動でコピーできませんでした。\n下の欄の文字を長押しして全部選び、手でコピーしてください。");
+});
+
+$("restoreBtn").addEventListener("click", async () => {
+  let obj = null;
+  try{ obj = JSON.parse($("backupOut").value); }catch(e){}
+  if(!obj || !Array.isArray(obj.prizes) || !Array.isArray(obj.history)){
+    await askInfo("復元できませんでした。\nバックアップの文字が正しく貼り付けられているか確認してください。");
+    return;
+  }
+  if(obj.version !== DATA_VERSION || obj.prizes.length !== PRIZE_DATA.length){
+    await askInfo("このバックアップは、いまの景品リストとは別のものです。\n（景品データを差し替える前のものと思われます）\n\n安全のため復元しませんでした。");
+    return;
+  }
+  const rem = obj.prizes.reduce((s,p) => s + (p.remain||0), 0);
+  const ok = await askConfirm("いまの在庫と履歴を、貼り付けた内容で上書きします。\n\n貼り付けた内容：のこり " + rem + " こ ／ はらいだし " + obj.history.length + " こ\n\nよろしいですか？");
+  if(!ok) return;
+  store.keepPrev(state);
+  state = obj;
+  store.save(state); renderAdmin();
+  await askInfo("復元しました。");
+});
+
+$("undoResetBtn").addEventListener("click", async () => {
+  const prev = store.loadPrev();
+  if(!prev || prev.version !== DATA_VERSION || !Array.isArray(prev.prizes)){
+    await askInfo("戻せる状態が保存されていません。\n（初期化や復元をした直後だけ使えます）");
+    return;
+  }
+  const rem = prev.prizes.reduce((s,p) => s + (p.remain||0), 0);
+  const ok = await askConfirm("初期化・復元をする直前の状態に戻します。\n\n戻す内容：のこり " + rem + " こ ／ はらいだし " + prev.history.length + " こ\n\nよろしいですか？");
+  if(!ok) return;
+  const cur = state;
+  state = prev;
+  store.keepPrev(cur);            // もう一度押せば元に戻せるよう入れ替えておく
+  store.save(state); renderAdmin();
+});
+
+const machineName = () => MACHINE_LABEL || "1台で使用";
+const machineSuffix = () => "_" + FILE_TAG;   // 「/」はファイル名に使えないため別に持つ
+
+$("csvStock").addEventListener("click", () => {
+  const rows = [["端末", machineName()], [], ["出展者","景品","単位","初期個数","払い出し","残り"]];
+  for(const s of state.prizes){
+    const m = master(s.id);
+    rows.push([m.giver, m.item, m.unit, s.initial, s.initial - s.remain, s.remain]);
+  }
+  rows.push([]);
+  rows.push(["合計","","",totalInitial(), state.history.length, totalRemain()]);
+  saveCsv("くじ引き_在庫" + machineSuffix() + "_" + stamp() + ".csv", rows);
+});
+
+$("csvHist").addEventListener("click", () => {
+  const rows = [["No","日時","端末","出展者","景品","単位"]];
+  state.history.forEach((rec,i) => {
+    const m = master(rec.id);
+    const d = new Date(rec.t), p = n => String(n).padStart(2,"0");
+    rows.push([i+1,
+      d.getFullYear() + "/" + p(d.getMonth()+1) + "/" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds()),
+      machineName(), m ? m.giver : "", m ? m.item : rec.id, m ? m.unit : ""]);
+  });
+  saveCsv("くじ引き_履歴" + machineSuffix() + "_" + stamp() + ".csv", rows);
+});
+
+/* 残っている景品の一覧。手直し欄のない、数えるための表 */
+function renderRemainList(){
+  const esc = s => String(s).replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+  const body = $("remainBody");
+  body.innerHTML = "";
+  const left = state.prizes.filter(p => p.remain > 0);
+  for(const s of left){
+    const m = master(s.id);
+    const tr = document.createElement("tr");
+    tr.innerHTML = "<td>" + esc(m.giver) + "</td><td>" + esc(m.item.replace(/\n/g, " ")) + "</td>"
+                 + '<td class="num">' + s.remain + " " + esc(m.unit) + "</td>";
+    body.appendChild(tr);
+  }
+  const sum = document.createElement("tr");
+  sum.className = "sum";
+  sum.innerHTML = '<td colspan="2">合計（' + left.length + ' 種類）</td><td class="num">' + totalRemain() + " こ</td>";
+  body.appendChild(sum);
+  const gone = state.prizes.filter(p => p.remain === 0).map(p => { const m = master(p.id); return esc(m.giver) + "／" + esc(m.item.replace(/\n/g, " ")); });
+  $("remainOutNames").innerHTML = gone.length ? "なくなった景品（" + gone.length + " 種類）：" + gone.join("、") : "なくなった景品はありません";
+}
+
+$("csvRemain").addEventListener("click", () => {
+  const rows = [["端末", machineName()], ["出力日時", new Date().toLocaleString("ja-JP")], [],
+                ["出展者","景品","単位","のこり","初期個数","払い出し"]];
+  for(const s of state.prizes){
+    const m = master(s.id);
+    rows.push([m.giver, m.item, m.unit, s.remain, s.initial, s.initial - s.remain]);
+  }
+  rows.push([]);
+  rows.push(["合計","","",totalRemain(), totalInitial(), state.history.length]);
+  saveCsv("くじ引き_残数一覧" + machineSuffix() + "_" + stamp() + ".csv", rows);
+});
+
+/* 在庫の手直し（＋−・直接入力） */
+$("stockBody").addEventListener("click", e => {
+  const b = e.target.closest("button[data-id]");
+  if(!b) return;
+  const s = stockOf(b.dataset.id);
+  if(!s) return;
+  s.remain = Math.max(0, s.remain + Number(b.dataset.d));
+  store.save(state); renderAdmin();
+});
+$("stockBody").addEventListener("change", e => {
+  const inp = e.target.closest("input[data-in]");
+  if(!inp) return;
+  const s = stockOf(inp.dataset.in);
+  if(!s) return;
+  const v = parseInt(inp.value, 10);
+  s.remain = isNaN(v) || v < 0 ? 0 : v;
+  store.save(state); renderAdmin();
+});
+
+/* 背景のふわふわ装飾を作る */
+(function(){
+  const deco = $("deco");
+  const cols = ["#FFC93C","#FF8A3D","#E23B3B","#2D8CF0","#3DBE6B"];
+  for(let i = 0; i < 14; i++){
+    const el = document.createElement("i");
+    const size = 3 + Math.random()*7;
+    el.style.cssText =
+      "width:" + size + "vmin;height:" + size + "vmin;left:" + (Math.random()*100) + "vw;" +
+      "color:" + cols[i % cols.length] + ";" +
+      "animation-duration:" + (16 + Math.random()*16) + "s;animation-delay:" + (-Math.random()*22) + "s";
+    deco.appendChild(el);
+  }
+})();
+
+/* iOSで音を鳴らせるようにする（最初のタップで解除） */
+["touchend","click"].forEach(ev => document.addEventListener(ev, () => sound.init(), { once:true, passive:true }));
+
+/* ダブルタップでの拡大を止める */
+document.addEventListener("gesturestart", e => e.preventDefault());
+document.addEventListener("dblclick", e => e.preventDefault());
+
+/* 2台で使う版は、端末名を画面のすみに小さく出しておく（取り違え防止） */
+if(MACHINE_LABEL){
+  const tag = $("machineTag");
+  tag.textContent = MACHINE_LABEL;
+  tag.hidden = false;
+  $("adminTitle").textContent = "かんり画面（スタッフ用）― " + MACHINE_LABEL;
+}
+
+if(!store.ok) showStoreWarn();
+
+/* この端末で初めて開いたときだけ、どの日・どの端末かを確認してもらう */
+if(isFirstRun && MACHINE_LABEL){
+  const other = MACHINE_NO === 1 ? "2号機" : "1号機";
+  askInfo("この ファイルは【" + DAY_LABEL + "・" + MACHINE_NO + "号機】です。\n"
+        + "この端末がうけもつ景品は " + totalRemain() + " こ です。\n\n"
+        + "・もう1台には必ず「" + DAY_LABEL + "・" + other + "」のファイルを入れてください\n"
+        + "（2台に同じファイルを入れると、用意した数より多く出てしまいます）\n\n"
+        + "・" + DAY_LABEL + " 以外の日には使わないでください（日ごとに在庫を分けてあります）\n\n"
+        + "・景品の実物は分けなくて大丈夫です。1か所にまとめて置いてかまいません");
+}
+
+/* ===== ホーム画面アプリ（https で開いたときだけ）=====
+   1回ネットにつないで開けば、中身を端末に保存してオフラインで動く。file:// では何もしない。 */
+const PWA_OK = location.protocol === "https:" || location.hostname === "localhost";   // localhost は動作確認用
+if("serviceWorker" in navigator && PWA_OK){
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+function renderOffline(){
+  const el = $("offlineState");
+  if(!PWA_OK){ el.textContent = "ファイルとして開いています（オフラインで動作中）"; return; }
+  if(!window.caches){ el.textContent = "⚠ この端末ではオフライン保存を確認できません"; return; }
+  caches.match(location.href.split("#")[0].split("?")[0]).then(r => {
+    el.textContent = r ? "✓ この端末にアプリを保存済み（オフラインでも使えます）"
+                       : "⚠ まだオフライン用に保存されていません。ネットにつないだまま開き直してください";
+  }).catch(() => { el.textContent = ""; });
+}
+
+/* 開催日以外に開いたときは、取り違え防止のため上に赤い帯を出す */
+(function(){
+  const d = new Date(), p = n => String(n).padStart(2,"0");
+  const today = d.getFullYear() + "-" + p(d.getMonth()+1) + "-" + p(d.getDate());
+  if(today === EVENT_DATE) return;
+  const w = $("dupWarn");
+  w.textContent = "この ファイルは " + DAY_LABEL + " 用です（きょうは " + (d.getMonth()+1) + "/" + d.getDate() + "）。当日でなければテスト用として使い、本番前に かんり画面で「在庫を初期値に戻す」を してください。";
+  w.hidden = false;
+})();
+</script>
+</body>
+</html>
