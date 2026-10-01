@@ -127,6 +127,9 @@ body{
   font-family:'Yu Gothic UI','Hiragino Sans',sans-serif;font-size:13px;font-weight:700;
   padding:calc(8px + env(safe-area-inset-top)) 14px 8px;text-align:center;line-height:1.5}
 #dupWarn[hidden]{display:none}
+#dupWarn{padding-left:56px;padding-right:56px}
+#dupWarnClose{position:absolute;right:calc(6px + env(safe-area-inset-right));bottom:2px;width:44px;height:36px;border:none;background:transparent;color:#fff;font-size:24px;font-weight:700;line-height:1;cursor:pointer;-webkit-appearance:none;appearance:none}
+#dupWarnClose:active{background:rgba(255,255,255,.2);border-radius:8px}
 
 /* ===== 結果画面 ===== */
 #screen-result{z-index:50;background:rgba(255,251,243,.975);justify-content:center;gap:4.2vmin}
@@ -349,7 +352,7 @@ body{
 </section>
 
 <canvas id="confetti"></canvas>
-<div id="dupWarn" hidden></div>
+<div id="dupWarn" hidden><span id="dupWarnText"></span><button id="dupWarnClose" aria-label="とじる">×</button></div>
 <div id="machineTag" hidden></div>
 <div id="staffPanel" aria-hidden="true"></div>
 <div id="adminHot" aria-hidden="true"></div>
@@ -1203,13 +1206,14 @@ addEventListener("storage", e => {
     state = other;
     refreshStaffPanel();
     if(!$("admin").hidden) renderAdmin();
-    const w = $("dupWarn");
+    const w = $("dupWarnText"); $("dupWarn").hidden = false;
     w.textContent = "このアプリを 2つ以上のタブ（ウィンドウ）で開いています。1つだけにしてください。";
     w.hidden = false;
   }catch(err){}
 });
 
 $("adminClose").addEventListener("click", closeAdmin);
+$("dupWarnClose").addEventListener("click", () => { $("dupWarn").hidden = true; });
 
 $("soundToggle").addEventListener("click", () => {
   state.sound = (state.sound === false);
@@ -1532,7 +1536,7 @@ function renderOffline(){
   const d = new Date(), p = n => String(n).padStart(2,"0");
   const today = d.getFullYear() + "-" + p(d.getMonth()+1) + "-" + p(d.getDate());
   if(today === EVENT_DATE) return;
-  const w = $("dupWarn");
+  const w = $("dupWarnText"); $("dupWarn").hidden = false;
   w.textContent = "この ファイルは " + DAY_LABEL + " 用です（きょうは " + (d.getMonth()+1) + "/" + d.getDate() + "）。当日でなければテスト用として使い、本番前に かんり画面で「在庫を初期値に戻す」を してください。";
   w.hidden = false;
 })();

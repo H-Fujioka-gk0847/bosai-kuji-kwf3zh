@@ -1,5 +1,5 @@
 /* ガラガラくじ：オフライン用の保存。ファイルを更新したら CACHE の番号が変わり、自動で入れ替わる */
-const CACHE = "kuji-2b18178919";
+const CACHE = "kuji-b7c6b0a632";
 const FILES = [
   "./",
   "./index.html",
