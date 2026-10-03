@@ -1430,15 +1430,19 @@ if("serviceWorker" in navigator && PWA_OK){
   navigator.serviceWorker.register("sw.js").catch(() => {});
 }
 try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}
-const APP_VER = "16ce7b9073";   // 公開したときの版。sw.js の CACHE 名と同じ
+const APP_LABEL = "Ver2.0";   // 人が見る版（例：Ver2.0）
+const APP_VER = "d6a7e5dcf6";       // 中身から作った識別番号。sw.js の CACHE 名と同じ
 function renderOffline(){
-  $("appVer").textContent = "アプリの版：" + APP_VER;
+  $("appVer").textContent = "アプリの版：" + APP_LABEL + "（" + APP_VER + "）";
   const el = $("offlineState");
   if(!PWA_OK){ el.textContent = "ファイルとして開いています（オフラインで動作中）"; return; }
-  if(!window.caches){ el.textContent = "⚠ この端末ではオフライン保存を確認できません"; return; }
-  caches.match(location.href.split("#")[0].split("?")[0]).then(r => {
-    el.textContent = r ? "✓ この端末にアプリを保存済み（オフラインでも使えます）"
-                       : "⚠ まだオフライン用に保存されていません。ネットにつないだまま開き直してください";
+  if(!window.caches || !("serviceWorker" in navigator)){ el.textContent = "⚠ この端末ではオフライン保存を確認できません"; return; }
+  /* 「保存の仕組みがこのページを受け持っている」かつ「今の版の保存にこのページが入っている」ときだけ ✓ */
+  const page = location.href.split("#")[0].split("?")[0];
+  caches.open("kuji-" + APP_VER).then(c => c.match(page)).then(r => {
+    el.textContent = (r && navigator.serviceWorker.controller)
+      ? "✓ この端末にアプリを保存済み（オフラインでも使えます）"
+      : "⚠ まだオフライン用の保存が終わっていません。ネットにつないだまま、アプリを完全に閉じて開き直してください";
   }).catch(() => { el.textContent = ""; });
 }
 
@@ -1454,7 +1458,7 @@ async function updateApp(){
     latest = m && m[1];
   }catch(e){}
   if(!latest){ await askInfo("最新版を確認できませんでした。\nネット接続を確かめて、もう一度押してください。"); return; }
-  if(latest === APP_VER){ await askInfo("最新版です（版：" + APP_VER + "）。"); return; }
+  if(latest === APP_VER){ await askInfo("最新版です（" + APP_LABEL + "・" + APP_VER + "）。"); return; }
   if(!await askConfirm("新しい版（" + latest + "）があります。\n更新して開き直します。\n\n在庫と払い出しの記録はそのまま残ります。\nよろしいですか？")) return;
   try{
     const reg = await navigator.serviceWorker.getRegistration();
