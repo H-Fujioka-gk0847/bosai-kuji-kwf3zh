@@ -388,7 +388,8 @@ body{
   </header>
   <div class="inner">
     <div class="warn" id="storeWarn" hidden></div>
-    <div class="note" id="offlineState" style="margin:0 0 10px;font-weight:700"></div>
+    <div class="note" id="offlineState" style="margin:0 0 6px;font-weight:700"></div>
+    <div class="row" style="align-items:center"><span class="note" id="appVer" style="margin:0"></span><button class="abtn" id="updateBtn">最新版に更新（ネット接続時）</button></div>
     <div class="cards">
       <div class="stat"><span>のこり</span><b id="sRemain">-</b></div>
       <div class="stat"><span>はらいだし</span><b id="sOut">-</b></div>
@@ -1245,6 +1246,7 @@ addEventListener("storage", e => {
 
 $("adminClose").addEventListener("click", closeAdmin);
 $("dupWarnClose").addEventListener("click", () => { $("dupWarn").hidden = true; });
+$("updateBtn").addEventListener("click", updateApp);
 
 $("soundToggle").addEventListener("click", () => {
   state.sound = (state.sound === false);
@@ -1592,7 +1594,9 @@ if("serviceWorker" in navigator && PWA_OK){
   navigator.serviceWorker.register("sw.js").catch(() => {});
 }
 try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+const APP_VER = "16ce7b9073";   // 公開したときの版。sw.js の CACHE 名と同じ
 function renderOffline(){
+  $("appVer").textContent = "アプリの版：" + APP_VER;
   const el = $("offlineState");
   if(!PWA_OK){ el.textContent = "ファイルとして開いています（オフラインで動作中）"; return; }
   if(!window.caches){ el.textContent = "⚠ この端末ではオフライン保存を確認できません"; return; }
@@ -1600,6 +1604,34 @@ function renderOffline(){
     el.textContent = r ? "✓ この端末にアプリを保存済み（オフラインでも使えます）"
                        : "⚠ まだオフライン用に保存されていません。ネットにつないだまま開き直してください";
   }).catch(() => { el.textContent = ""; });
+}
+
+/* 最新版の確認と更新。ネットがあるときだけ。在庫と記録は端末の保存領域にあるので消えない */
+async function updateApp(){
+  if(!PWA_OK){ await askInfo("ファイルとして開いているので、この画面からは更新できません。\n新しいファイルに差し替えてください。"); return; }
+  if(!navigator.onLine){ await askInfo("いまネットにつながっていません。\nネットにつないでから押してください。"); return; }
+  let latest = null;
+  try{
+    /* sw.js はオフライン保存の対象外なので、必ずサーバーの最新が返る */
+    const t = await (await fetch("sw.js?v=" + Date.now(), { cache:"no-store" })).text();
+    const m = t.match(/const CACHE = "kuji-([^"]+)"/);
+    latest = m && m[1];
+  }catch(e){}
+  if(!latest){ await askInfo("最新版を確認できませんでした。\nネット接続を確かめて、もう一度押してください。"); return; }
+  if(latest === APP_VER){ await askInfo("最新版です（版：" + APP_VER + "）。"); return; }
+  if(!await askConfirm("新しい版（" + latest + "）があります。\n更新して開き直します。\n\n在庫と払い出しの記録はそのまま残ります。\nよろしいですか？")) return;
+  try{
+    const reg = await navigator.serviceWorker.getRegistration();
+    if(reg){
+      await reg.update();
+      const sw = reg.installing || reg.waiting;
+      if(sw) await new Promise(r => {
+        const done = () => { if(sw.state === "activated" || sw.state === "redundant") r(); };
+        sw.addEventListener("statechange", done); done(); setTimeout(r, 8000);
+      });
+    }
+  }catch(e){}
+  location.reload();
 }
 
 /* 開催日以外に開いたときは、取り違え防止のため上に赤い帯を出す */
