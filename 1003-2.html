@@ -243,6 +243,14 @@ body{
 #remainHead h3{margin:0}
 #remainOutNames{font-size:12px;color:#777;line-height:1.7;margin-top:8px}
 
+#admin .addForm{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:10px}
+#admin .addForm label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:#555;font-weight:700}
+#admin .addForm input{height:42px;border:1px solid #C8CDD3;border-radius:8px;padding:0 10px;font-family:inherit;font-size:15px;
+  -webkit-user-select:text;user-select:text}
+.delBtn{margin-left:6px;height:36px;padding:0 10px;border:1px solid #E23B3B;background:#fff;color:#E23B3B;border-radius:8px;
+  font-family:inherit;font-weight:700;cursor:pointer}
+.addTag{display:inline-block;margin-left:4px;font-size:10px;color:#fff;background:#2D8CF0;border-radius:4px;padding:0 5px;vertical-align:middle}
+
 @media (prefers-reduced-motion: reduce){
   .deco i,.big-btn{animation:none}
 }
@@ -405,6 +413,22 @@ body{
       ・在庫はこの端末の中（ブラウザ）に保存されます。別の端末とは共有されません。<br>
       ・プライベートブラウズでは保存されない場合があります。通常のタブで使ってください。
     </div>
+
+    <h3>景品を追加する（新しい品目）</h3>
+    <div class="note">
+      ・ここで追加した景品は【この端末だけ】に入ります。もう1台にも入れる場合は、そちらの かんり画面でも追加してください（個数は2台で分けてください）。<br>
+      ・すでにある景品の数を増やすときは、上の在庫の「＋」を使ってください。<br>
+      ・まちがえて追加したときは、まだ1つも出ていなければ在庫の表の「削除」で消せます。
+    </div>
+    <div class="addForm">
+      <label>出展者（企業・団体名）<input id="addGiver" placeholder="例：〇〇株式会社"></label>
+      <label>出展者のよみ（ひらがな）<input id="addKana" placeholder="例：まるまるかぶしきがいしゃ"></label>
+      <label>景品名（スタッフ用の正式名）<input id="addItem" placeholder="例：防災ホイッスル"></label>
+      <label>こども向けの表示（空なら景品名）<input id="addKids" placeholder="例：ぼうさい ホイッスル"></label>
+      <label>単位<input id="addUnit" value="個"></label>
+      <label>この端末に入れる個数<input id="addStock" type="number" min="1" inputmode="numeric" placeholder="例：10"></label>
+    </div>
+    <div class="row" style="margin-top:8px"><button class="abtn primary" id="addBtn">この景品を追加する</button></div>
 
     <div id="remainHead">
       <h3>のこっている景品の一覧（終わったあとの数え・翌日への引き継ぎ用）</h3>
@@ -638,7 +662,10 @@ const FILE_TAG = "1003_2号機";
 
 /* ---- 玉／紙吹雪の色（景品ごとに固定） ---- */
 const COLORS = ["#E23B3B","#2D8CF0","#3DBE6B","#FFC93C","#A15BD6","#FF8A3D"];
-const colorOf = p => COLORS[PRIZE_DATA.findIndex(x => x.id === p.id) % COLORS.length];
+/* 元の景品＋かんり画面で追加した景品 */
+const allPrizes = () => PRIZE_DATA.concat((state && Array.isArray(state.custom)) ? state.custom : []);
+const colorOf = p => COLORS[Math.max(0, allPrizes().findIndex(x => x.id === p.id)) % COLORS.length];
+const escHtml = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
 const $ = id => document.getElementById(id);
 const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -675,12 +702,15 @@ const store = {
   }
 };
 
-function freshState(){
+/* custom：かんり画面で追加した景品。初期値に戻しても品目は残し、数は追加したときの数に戻す */
+function freshState(custom){
+  custom = Array.isArray(custom) ? custom.map(p => Object.assign({}, p)) : [];
   return {
     version: DATA_VERSION,
     startedAt: new Date().toISOString(),
     sound: true,
-    prizes: PRIZE_DATA.map(p => ({ id:p.id, remain:p.stock, initial:p.stock })),
+    prizes: PRIZE_DATA.concat(custom).map(p => ({ id:p.id, remain:p.stock, initial:p.stock })),
+    custom: custom,
     history: []
   };
 }
@@ -699,7 +729,7 @@ let state = (function(){
   return st;
 })();
 
-const master = id => PRIZE_DATA.find(p => p.id === id);
+const master = id => allPrizes().find(p => p.id === id);
 const stockOf = id => state.prizes.find(p => p.id === id);
 const totalRemain = () => state.prizes.reduce((s,p) => s + p.remain, 0);
 const totalInitial = () => state.prizes.reduce((s,p) => s + p.initial, 0);
@@ -979,14 +1009,15 @@ function renderAdmin(){
     if(s.remain === 0) tr.className = "zero";
     else if(s.remain <= 3) tr.className = "low";
     tr.innerHTML =
-      "<td>" + m.giver + "</td>" +
-      "<td>" + m.item.replace(/\n/g, " ") + "</td>" +
+      "<td>" + escHtml(m.giver) + "</td>" +
+      "<td>" + escHtml(m.item.replace(/\n/g, " ")) + (m.custom ? '<span class="addTag">追加</span>' : "") + "</td>" +
       '<td class="num">' + s.initial + "</td>" +
       '<td class="num">' + (s.initial - s.remain) + "</td>" +
       '<td class="num remain">' + s.remain + " " + m.unit + "</td>" +
       '<td><span class="stepper"><button data-d="-1" data-id="' + s.id + '">−</button>' +
       '<input type="number" min="0" value="' + s.remain + '" data-in="' + s.id + '">' +
-      '<button data-d="1" data-id="' + s.id + '">＋</button></span></td>';
+      '<button data-d="1" data-id="' + s.id + '">＋</button></span>' +
+      (m.custom ? '<button class="delBtn" data-del="' + s.id + '">削除</button>' : "") + '</td>';
     body.appendChild(tr);
   }
 
@@ -1002,7 +1033,7 @@ function renderAdmin(){
     const m = master(rec.id);
     const d = new Date(rec.t);
     const hh = String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0") + ":" + String(d.getSeconds()).padStart(2,"0");
-    h.innerHTML += "<div>" + hh + "　" + (m ? m.giver + "／" + m.item.replace(/\n/g," ") : rec.id) + "</div>";
+    h.innerHTML += "<div>" + hh + "　" + escHtml(m ? m.giver + "／" + m.item.replace(/\n/g," ") : rec.id) + "</div>";
   }
 }
 
@@ -1177,7 +1208,7 @@ $("resetBtn").addEventListener("click", async () => {
   const ok2 = await askConfirm("本当に初期化しますか？\n（当日の途中で押すと、それまでの記録が消えます）\n\n押し間違えた場合は、下の「ひとつ前の状態に戻す」で戻せます。");
   if(!ok2) return;
   store.keepPrev(state);          // 押し間違えても戻せるように退避しておく
-  state = freshState();
+  state = freshState(state.custom);
   store.save(state); renderAdmin();
 });
 
@@ -1201,7 +1232,7 @@ $("restoreBtn").addEventListener("click", async () => {
     await askInfo("復元できませんでした。\nバックアップの文字が正しく貼り付けられているか確認してください。");
     return;
   }
-  if(obj.version !== DATA_VERSION || obj.prizes.length !== PRIZE_DATA.length){
+  if(obj.version !== DATA_VERSION || obj.prizes.length !== PRIZE_DATA.length + (Array.isArray(obj.custom) ? obj.custom.length : 0)){
     await askInfo("このバックアップは、いまの景品リストとは別のものです。\n（景品データを差し替える前のものと思われます）\n\n安全のため復元しませんでした。");
     return;
   }
@@ -1286,6 +1317,46 @@ $("csvRemain").addEventListener("click", () => {
   rows.push([]);
   rows.push(["合計","","",totalRemain(), totalInitial(), state.history.length]);
   saveCsv("くじ引き_残数一覧" + machineSuffix() + "_" + stamp() + ".csv", rows);
+});
+
+/* =========================== 景品（品目）の追加 ===========================
+   追加した品目は state.custom に入れて端末内に保存する。元の景品データ（PRIZE_DATA）は変えないので、
+   今ある在庫・払い出し記録はそのまま引き継がれる。 */
+$("addBtn").addEventListener("click", async () => {
+  const v = id => $(id).value.normalize("NFKC").trim();
+  const giver = v("addGiver"), kana = v("addKana"), item = v("addItem"), unit = v("addUnit") || "個";
+  const kids = $("addKids").value.trim() || item;
+  const n = parseInt(v("addStock"), 10);
+  if(!giver || !item){ await askInfo("「出展者」と「景品名」を入力してください。"); return; }
+  if(!(n >= 1)){ await askInfo("個数は 1 以上の数字を入力してください。"); return; }
+  if(allPrizes().some(p => p.giver.normalize("NFKC").trim() === giver && p.item.normalize("NFKC").replace(/\s+/g," ").trim() === item)){
+    await askInfo("同じ出展者・景品名の景品がすでにあります。\n数を増やすときは、在庫の「＋」を使ってください。");
+    return;
+  }
+  const ok = await askConfirm("この端末（" + MACHINE_LABEL + "）に景品を追加します。\n\n"
+    + "出展者：" + giver + (kana ? "（" + kana + "）" : "") + "\n景品：" + item + "\nこども向け：" + kids
+    + "\n個数：" + n + " " + unit + "\n\nよろしいですか？");
+  if(!ok) return;
+  const id = "C" + Date.now().toString(36);
+  if(!Array.isArray(state.custom)) state.custom = [];
+  state.custom.push({ id: id, giver: giver, giverKana: kana, item: item, kids: kids, unit: unit, stock: n, custom: true });
+  state.prizes.push({ id: id, remain: n, initial: n });
+  store.save(state); renderAdmin();
+  ["addGiver","addKana","addItem","addKids","addStock"].forEach(k => $(k).value = "");
+  await askInfo("追加しました。\nこの端末の のこりは " + totalRemain() + " こ に なりました。");
+});
+
+/* 追加した品目の削除（1つも出ていないものだけ） */
+$("stockBody").addEventListener("click", async e => {
+  const b = e.target.closest("button[data-del]");
+  if(!b) return;
+  const id = b.dataset.del, m = master(id);
+  if(!m || !m.custom) return;
+  if(state.history.some(h => h.id === id)){ await askInfo("この景品はすでに払い出しがあるため削除できません。\n出さないようにするには、残りを 0 にしてください。"); return; }
+  if(!await askConfirm("追加した景品を削除します。\n\n" + m.giver + "／" + m.item + "\n\nよろしいですか？")) return;
+  state.custom = state.custom.filter(p => p.id !== id);
+  state.prizes = state.prizes.filter(p => p.id !== id);
+  store.save(state); renderAdmin();
 });
 
 /* 在庫の手直し（＋−・直接入力） */
